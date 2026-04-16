@@ -1,3 +1,21 @@
+// ==== FIX JSON PARSING START ====
+const originalFetch = window.fetch;
+window.fetch = async function(...args) {
+    const res = await originalFetch.apply(this, args);
+    const originalJson = res.json.bind(res);
+    res.json = async function() {
+        const contentType = res.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            return await originalJson();
+        }
+        const text = await res.text();
+        const cleanText = text.replace(/<[^>]*>?/gm, '').trim().substring(0, 100);
+        throw new Error(!res.ok ? (cleanText || "Server error occurred") : "Invalid JSON response");
+    };
+    return res;
+};
+// ==== FIX JSON PARSING END ====
+
 const API_BASE = '/api/public/store';
 
 let allProducts = [];
